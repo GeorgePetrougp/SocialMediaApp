@@ -29,6 +29,3 @@ Clean Architecture using CQRS Pattern
 -	Authentication,Authorisation. Registration/Login Setup and JWTBearer
 
 
-
-![CQRS](https://github.com/GeorgePetrougp/SocialMediaApp/assets/110170196/e0753900-6f23-4fe2-bb7b-3f2af938eb39)
-
