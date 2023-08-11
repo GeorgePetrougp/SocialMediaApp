@@ -1,22 +1,14 @@
-﻿using AutoMapper;
-using MediatR;
+﻿using MediatR;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
-using Microsoft.IdentityModel.Tokens;
 using SocialMediaApp.Application.Enums;
 using SocialMediaApp.Application.Identity.Commands;
 using SocialMediaApp.Application.Models;
-using SocialMediaApp.Application.Options;
+using SocialMediaApp.Application.Services;
 using SocialMediaApp.Data;
-using System;
-using System.Collections.Generic;
+using SocialMediaApp.Domain.Aggregates.UserProfileAggregate;
 using System.IdentityModel.Tokens.Jwt;
-using System.Linq;
 using System.Security.Claims;
-using System.Security.Principal;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace SocialMediaApp.Application.Identity.CommandHandlers
 {
@@ -24,13 +16,13 @@ namespace SocialMediaApp.Application.Identity.CommandHandlers
     {
         private readonly DataContext _context;
         private readonly UserManager<IdentityUser> _userManager;
-        private readonly JwtSettings _jwtSettings;
+        private readonly IdentityService _identityService;
 
-        public LoginCommandHandler(DataContext context, UserManager<IdentityUser> userManager, IOptions<JwtSettings> jwtSettings)
+        public LoginCommandHandler(DataContext context, UserManager<IdentityUser> userManager, IdentityService identityService)
         {
             _context = context;
             _userManager = userManager;
-            _jwtSettings = jwtSettings.Value;
+            _identityService = identityService;
         }
         public async Task<OperationResult<string>> Handle(LoginCommand request, CancellationToken cancellationToken)
         {
@@ -38,48 +30,14 @@ namespace SocialMediaApp.Application.Identity.CommandHandlers
 
             try
             {
-                var identityUser = await _userManager.FindByEmailAsync(request.UserName);
-
-                if(identityUser is null)
-                {
-                    result.IsError = true;
-                    var error = new Error { ErrorCode = ErrorCodes.IdentityUserDoesNotExist, ErrorMessage = $"Unable to find user with the specified username" };
-                    result.Errors.Add(error);
-                    return result;
-                }
-
-                var validPass = await _userManager.CheckPasswordAsync(identityUser, request.Password);
-
-                if (!validPass)
-                {
-                    result.IsError = true;
-                    var error = new Error { ErrorCode = ErrorCodes.IncorrectPassword, ErrorMessage = $"Password Not valid. Login Failed" };
-                    result.Errors.Add(error);
-                    return result;
-                }
+                var identityUser = await GetIdentityUserValidatedAsync(request, result);
+                if (identityUser == null) return result;
 
                 var userProfile = await _context.UserProfiles.FirstOrDefaultAsync(user => user.IdentityId == identityUser.Id);
 
-                var tokenHandler = new JwtSecurityTokenHandler();
-                var key = Encoding.ASCII.GetBytes(_jwtSettings.SigningKey);
-                var tokenDescriptor = new SecurityTokenDescriptor()
-                {
-                    Subject = new ClaimsIdentity(new Claim[]
-                    {
-                        new Claim(JwtRegisteredClaimNames.Sub, identityUser.Email),
-                        new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-                        new Claim(JwtRegisteredClaimNames.Email, identityUser.Email),
-                        new Claim("IdentityId", identityUser.Id),
-                        new Claim("UserProfileId", userProfile.UserProfileId.ToString())
-                    }),
-                    Expires = DateTime.Now.AddHours(2),
-                    Audience = _jwtSettings.Audiences[0],
-                    Issuer = _jwtSettings.Issuer,
-                    SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
-                };
 
-                var token = tokenHandler.CreateToken(tokenDescriptor);
-                result.Payload = tokenHandler.WriteToken(token);
+                result.Payload = GetJwtString(identityUser, userProfile);
+
                 return result;
 
 
@@ -92,6 +50,46 @@ namespace SocialMediaApp.Application.Identity.CommandHandlers
                 result.Errors.Add(error);
             }
             return result;
+        }
+
+        private async Task<IdentityUser> GetIdentityUserValidatedAsync(LoginCommand request, OperationResult<string> result)
+        {
+            var identityUser = await _userManager.FindByEmailAsync(request.UserName);
+
+            if (identityUser is null)
+            {
+                result.IsError = true;
+                var error = new Error { ErrorCode = ErrorCodes.IdentityUserDoesNotExist, ErrorMessage = $"Unable to find user with the specified username" };
+                result.Errors.Add(error);
+                return null;
+            }
+
+            var validPass = await _userManager.CheckPasswordAsync(identityUser, request.Password);
+
+            if (!validPass)
+            {
+                result.IsError = true;
+                var error = new Error { ErrorCode = ErrorCodes.IncorrectPassword, ErrorMessage = $"Password Not valid. Login Failed" };
+                result.Errors.Add(error);
+                return null;
+            }
+
+            return identityUser;
+        }
+
+        private string GetJwtString(IdentityUser identityUser, UserProfile user)
+        {
+            var claimsIdentity = new ClaimsIdentity(new Claim[]
+                    {
+                        new Claim(JwtRegisteredClaimNames.Sub, identityUser.Email),
+                        new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+                        new Claim(JwtRegisteredClaimNames.Email, identityUser.Email),
+                        new Claim("IdentityId", identityUser.Id),
+                        new Claim("UserProfileId", user.UserProfileId.ToString())
+                    });
+            var token = _identityService.CreateSecurityToken(claimsIdentity);
+
+            return _identityService.PrintToken(token);
         }
     }
 }
