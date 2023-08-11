@@ -17,6 +17,8 @@ Clean Architecture using CQRS Pattern
 -	DTOS (Contracts): using records instead of classes to compare instances. Import Value Based Comparison
 
 -	Application layer: Generic Response Class
+  
+-	Dependency Injection
 
 -	Custom Error Handling. OperationResult class, Error response system
 
