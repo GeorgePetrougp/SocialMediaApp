@@ -21,11 +21,11 @@ namespace SocialMediaApp.Api.Controllers.V1
                 return NotFound(apiError);
             }            
 
-                apiError.StatusCode = 500;
-                apiError.StatusPhrase = "Internal server error";
+                apiError.StatusCode = 400;
+                apiError.StatusPhrase = "Bad Request";
                 apiError.TimeStamp = DateTime.Now;
-                apiError.Errors.Add("Unknown Error");
-                return StatusCode(500, apiError);
+                errors.ForEach(error => apiError.Errors.Add(error.ErrorMessage));
+                return StatusCode(400, apiError);
             
         }
     }

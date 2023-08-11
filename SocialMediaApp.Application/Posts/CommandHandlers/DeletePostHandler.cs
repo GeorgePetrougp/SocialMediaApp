@@ -5,12 +5,7 @@ using SocialMediaApp.Application.Models;
 using SocialMediaApp.Application.Posts.Commands;
 using SocialMediaApp.Data;
 using SocialMediaApp.Domain.Aggregates.PostAggregate;
-using SocialMediaApp.Domain.Exceptions;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+
 
 namespace SocialMediaApp.Application.Posts.CommandHandlers
 {
@@ -34,6 +29,14 @@ namespace SocialMediaApp.Application.Posts.CommandHandlers
                 {
                     result.IsError = true;
                     var error = new Error { ErrorCode = ErrorCodes.NotFound, ErrorMessage = $"No User Profile with ID{request.PostId} found" };
+                    result.Errors.Add(error);
+                    return result;
+                }
+
+                if(post.UserProfileId != request.UserProfileId)
+                {
+                    result.IsError = true;
+                    var error = new Error { ErrorCode = ErrorCodes.PostDeleteNotPossible, ErrorMessage = $"Post delete not possible.Only the owner of the post can delete it" };
                     result.Errors.Add(error);
                     return result;
                 }

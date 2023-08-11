@@ -34,20 +34,7 @@ namespace SocialMediaApp.Api.Controllers.V1
             return Ok(profiles);
         }
 
-        [HttpPost]
-        [ValidateModel]
-        public async Task<IActionResult> CreateUserProfile([FromBody] UserProfileCreateUpdate profile)
-        {
-            var command = _mapper.Map<CreateUserCommand>(profile);
-            var response = await _mediator.Send(command);
-
-
-            var userProfile = _mapper.Map<UserProfileResponse>(response.Payload);
-
-            return response.IsError ? HandleErrorResponse(response.Errors) : CreatedAtAction(nameof(GetUserProfileById), new {id = userProfile.UserProfileId,userProfile});
-
-
-        }
+        
 
         [Route(ApiRoutes.UserProfiles.IdRoute)]
         [HttpGet]
@@ -76,6 +63,7 @@ namespace SocialMediaApp.Api.Controllers.V1
 
         }
 
+        //through the identity controller
         [HttpDelete]
         [Route(ApiRoutes.UserProfiles.IdRoute)]
         [ValidateGuid("id")]

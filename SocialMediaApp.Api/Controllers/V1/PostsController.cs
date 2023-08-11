@@ -1,15 +1,11 @@
-﻿using SocialMediaApp.Api.Contracts.Common;
-using SocialMediaApp.Api.Contracts.Post.Requests;
-using SocialMediaApp.Api.Contracts.Post.Responses;
-using SocialMediaApp.Api.Filters;
-using SocialMediaApp.Application.Posts.Commands;
-using SocialMediaApp.Application.Posts.Queries;
+﻿
 
 namespace SocialMediaApp.Api.Controllers.V1
 {
     [ApiVersion("1.0")]
     [Route(ApiRoutes.BaseRoute)]
     [ApiController]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public class PostsController : BaseController
     {
 
@@ -50,9 +46,11 @@ namespace SocialMediaApp.Api.Controllers.V1
         [ValidateModel]
         public async Task<IActionResult> CreatePost([FromBody] PostCreate newPost)
         {
+
+            var userProfileId = HttpContext.GetUserProfileIdClaimValue();
             var command = new CreatePost
             {
-                UserProfileId = Guid.Parse(newPost.UserProfileId),
+                UserProfileId = userProfileId,
                 TextContent = newPost.TextContent
             };
 
@@ -68,10 +66,13 @@ namespace SocialMediaApp.Api.Controllers.V1
         [ValidateModel]
         public async Task<IActionResult> UpdatePost([FromBody] PostUpdate updatedPost, string id)
         {
+            var userProfileId = HttpContext.GetUserProfileIdClaimValue();
+
             var command = new UpdatePostText()
             {
                 NewText = updatedPost.Text,
-                PostId = Guid.Parse(id)
+                PostId = Guid.Parse(id),
+                UserProfileId = userProfileId
             };
 
             var result = await _mediator.Send(command);
@@ -86,9 +87,11 @@ namespace SocialMediaApp.Api.Controllers.V1
         [ValidateGuid("id")]
         public async Task<IActionResult> DeletePost(string id)
         {
+            var userProfileId = HttpContext.GetUserProfileIdClaimValue();
             var command = new DeletePost()
             {
-                PostId = Guid.Parse(id)
+                PostId = Guid.Parse(id),
+                UserProfileId = userProfileId
             };
             var result = await _mediator.Send(command);
 

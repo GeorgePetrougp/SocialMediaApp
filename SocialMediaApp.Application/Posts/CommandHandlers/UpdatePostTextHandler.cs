@@ -38,6 +38,14 @@ namespace SocialMediaApp.Application.Posts.CommandHandlers
                     return result;
                 }
 
+                if(post.UserProfileId != request.UserProfileId)
+                {
+                    result.IsError = true;
+                    var error = new Error { ErrorCode = ErrorCodes.PostUpdateNotPossible, ErrorMessage = $"Post update not possible.It is not the post owner that initiates the update" };
+                    result.Errors.Add(error);
+                    return result;
+                }
+
                 post.UpdatePostContent(request.NewText);
 
                 await _context.SaveChangesAsync();

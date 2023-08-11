@@ -2,8 +2,6 @@
 {
     public record PostCreate
     {
-        [Required]
-        public string UserProfileId { get; set; }
 
         [Required]
         [StringLength(1000)]

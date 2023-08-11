@@ -17,4 +17,8 @@
     <ProjectReference Include="..\SocialMediaApp.Domain\SocialMediaApp.Domain.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="MappingProfiles\" />
+  </ItemGroup>
+
 </Project>
