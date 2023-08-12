@@ -32,9 +32,8 @@ namespace SocialMediaApp.Application.UserProfiles.CommandHandlers
 
                 if(userProfile is null)
                 {
-                    result.IsError = true;
-                    var error = new Error {ErrorCode = ErrorCodes.NotFound, ErrorMessage = $"No User Profile with ID{request.UserProfileId} found" };
-                    result.Errors.Add(error);
+                    result.AddError(ErrorCodes.NotFound, string.Format(UserProfileErrorMessages.UserProfileNotFound, request.UserProfileId));
+                    
                     return result;
                 }
 
@@ -52,23 +51,13 @@ namespace SocialMediaApp.Application.UserProfiles.CommandHandlers
             }
             catch (UserProfileNotValidException ex)
             {
-                result.IsError = true;
-                ex.ValidationErrors.ForEach(e =>
-                {
-                    var error = new Error { ErrorCode = ErrorCodes.ValidationError, ErrorMessage = $"{ex.Message}" };
-                    result.Errors.Add(error);
-                });
-
-                return result;
+                ex.ValidationErrors.ForEach(e =>result.AddError(ErrorCodes.ValidationError,e));
             }
 
 
             catch (Exception ex)
             {
-                var error = new Error { ErrorCode = ErrorCodes.ServerError, ErrorMessage = ex.Message };
-                result.IsError = true;
-                result.Errors.Add(error);
-
+                result.AddUnknownError(ex.Message);
             }
             
             return result;

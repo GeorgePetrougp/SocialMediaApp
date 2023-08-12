@@ -32,17 +32,15 @@ namespace SocialMediaApp.Application.Posts.CommandHandlers
 
                 if(post is null)
                 {
-                    result.IsError = true;
-                    var error = new Error { ErrorCode = ErrorCodes.NotFound, ErrorMessage = $"No User Profile with ID{request.PostId} found" };
-                    result.Errors.Add(error);
+                    result.AddError(ErrorCodes.NotFound, string.Format(PostErrorMessages.PostNotFound, request.PostId));
+                    
                     return result;
                 }
 
                 if(post.UserProfileId != request.UserProfileId)
                 {
-                    result.IsError = true;
-                    var error = new Error { ErrorCode = ErrorCodes.PostUpdateNotPossible, ErrorMessage = $"Post update not possible.It is not the post owner that initiates the update" };
-                    result.Errors.Add(error);
+                    result.AddError(ErrorCodes.PostUpdateNotPossible, PostErrorMessages.PostUpdateNorPossible);
+
                     return result;
                 }
 
@@ -54,18 +52,11 @@ namespace SocialMediaApp.Application.Posts.CommandHandlers
             }
             catch (PostNotValidException ex)
             {
-                result.IsError = true;
-                ex.ValidationErrors.ForEach(e =>
-                {
-                    var error = new Error { ErrorCode = ErrorCodes.ValidationError, ErrorMessage = $"{ex.Message}" };
-                    result.Errors.Add(error);
-                });
+                ex.ValidationErrors.ForEach(e => result.AddError(ErrorCodes.ValidationError,e));
             }
             catch (Exception ex)
             {
-                var error = new Error { ErrorCode = ErrorCodes.UnknownError, ErrorMessage = $"{ex.Message}" };
-                result.IsError = true;
-                result.Errors.Add(error);
+                result.AddUnknownError(ex.Message);
             }
 
             return result;

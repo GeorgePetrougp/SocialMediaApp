@@ -31,7 +31,7 @@ namespace SocialMediaApp.Application.Identity.CommandHandlers
             try
             {
                 var identityUser = await GetIdentityUserValidatedAsync(request, result);
-                if (identityUser == null) return result;
+                if (result.IsError) return result;
 
                 var userProfile = await _context.UserProfiles.FirstOrDefaultAsync(user => user.IdentityId == identityUser.Id);
 
@@ -44,10 +44,8 @@ namespace SocialMediaApp.Application.Identity.CommandHandlers
             }
             catch (Exception ex)
             {
-
-                var error = new Error { ErrorCode = ErrorCodes.UnknownError, ErrorMessage = $"{ex.Message}" };
-                result.IsError = true;
-                result.Errors.Add(error);
+                result.AddUnknownError(ex.Message);
+                
             }
             return result;
         }
@@ -56,23 +54,12 @@ namespace SocialMediaApp.Application.Identity.CommandHandlers
         {
             var identityUser = await _userManager.FindByEmailAsync(request.UserName);
 
-            if (identityUser is null)
-            {
-                result.IsError = true;
-                var error = new Error { ErrorCode = ErrorCodes.IdentityUserDoesNotExist, ErrorMessage = $"Unable to find user with the specified username" };
-                result.Errors.Add(error);
-                return null;
-            }
-
+            if (identityUser is null) result.AddError(ErrorCodes.IdentityUserDoesNotExist, IdentityErrorMessages.NonExistantIdentityUser);
+            
             var validPass = await _userManager.CheckPasswordAsync(identityUser, request.Password);
 
-            if (!validPass)
-            {
-                result.IsError = true;
-                var error = new Error { ErrorCode = ErrorCodes.IncorrectPassword, ErrorMessage = $"Password Not valid. Login Failed" };
-                result.Errors.Add(error);
-                return null;
-            }
+            if (!validPass) result.AddError(ErrorCodes.IncorrectPassword, IdentityErrorMessages.InvalidPassword);
+           
 
             return identityUser;
         }

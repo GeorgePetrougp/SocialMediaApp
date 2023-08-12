@@ -30,9 +30,8 @@ namespace SocialMediaApp.Application.Posts.QueryHandler
             }
             catch (Exception e) 
             {
-                var error = new Error { ErrorCode = ErrorCodes.UnknownError, ErrorMessage = $"{e.Message}" };
-                result.IsError = true;
-                result.Errors.Add(error);
+
+                result.AddUnknownError(e.Message);
                 
             }
             return result;

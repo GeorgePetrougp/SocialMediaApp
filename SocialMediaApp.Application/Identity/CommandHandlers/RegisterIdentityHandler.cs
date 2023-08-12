@@ -8,6 +8,7 @@ using SocialMediaApp.Application.Models;
 using SocialMediaApp.Application.Services;
 using SocialMediaApp.Data;
 using SocialMediaApp.Domain.Aggregates.UserProfileAggregate;
+using SocialMediaApp.Domain.Exceptions;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 
@@ -30,70 +31,61 @@ namespace SocialMediaApp.Application.Identity.CommandHandlers
             var result = new OperationResult<string>();
             try
             {
-                var creationValid = await IdentityDoesNotExistValidation(result, request);
-                if (!creationValid) return result;
+                await IdentityDoesNotExistValidation(result, request);
+                if (result.IsError) return result;
 
 
-                await using var transaction = _context.Database.BeginTransaction();// so that If something fails inside this transaction to rollback and not do anything included in the using!
-                var identity = await CreateIdentityUserAsync(result, request, transaction);
-                if (identity == null) return result;
-                var profile = await CreateUserProfileAsync(result, request, transaction, identity);
-                await transaction.CommitAsync();
+                await using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);// so that If something fails inside this transaction to rollback and not do anything included in the using!
 
+                var identity = await CreateIdentityUserAsync(result, request, transaction,cancellationToken);
+                if (result.IsError) return result;
 
+                var profile = await CreateUserProfileAsync(result, request, transaction, identity,cancellationToken);
+                await transaction.CommitAsync(cancellationToken);
 
                 result.Payload = GetJwtString(identity, profile);
-
                 return result;
+
+            }
+            catch(UserProfileNotValidException ex)
+            {
+                ex.ValidationErrors.ForEach(error => {result.AddError(ErrorCodes.ValidationError, error);});
             }
             catch (Exception ex)
             {
-                var error = new Error { ErrorCode = ErrorCodes.UnknownError, ErrorMessage = $"{ex.Message}" };
-                result.IsError = true;
-                result.Errors.Add(error);
+                result.AddUnknownError(ex.Message);
+               
             }
             return result;
         }
 
-        private async Task<bool> IdentityDoesNotExistValidation(OperationResult<string> result, RegisterIdentity request)
+        private async Task IdentityDoesNotExistValidation(OperationResult<string> result, RegisterIdentity request)
         {
 
             var existingIdentity = await _userManager.FindByEmailAsync(request.UserName);
 
-            if (existingIdentity != null)
-            {
-                result.IsError = true;
-                var error = new Error { ErrorCode = ErrorCodes.IdentityUserAlreadyExists, ErrorMessage = $"Email already exists.Can not Register" };
-                result.Errors.Add(error);
-                return false;
-            }
+            if (existingIdentity != null) result.AddError(ErrorCodes.IdentityUserAlreadyExists, IdentityErrorMessages.EmailAlreadyExists);
 
-            return true;
         }
-
-        private async Task<IdentityUser> CreateIdentityUserAsync(OperationResult<string> result, RegisterIdentity request, IDbContextTransaction transaction)
+        private async Task<IdentityUser> CreateIdentityUserAsync(OperationResult<string> result, RegisterIdentity request, IDbContextTransaction transaction, CancellationToken cancellationToken)
         {
             var identity = new IdentityUser { Email = request.UserName, UserName = request.UserName };
             var createdIdentity = await _userManager.CreateAsync(identity, request.Password);
             if (!createdIdentity.Succeeded)
             {
-                await transaction.RollbackAsync();
+                await transaction.RollbackAsync(cancellationToken);
 
-                result.IsError = true;
 
                 foreach (var identityError in createdIdentity.Errors)
                 {
-
-                    var error = new Error { ErrorCode = ErrorCodes.IdentityCreationFailed, ErrorMessage = identityError.Description };
-                    result.Errors.Add(error);
+                    result.AddError(ErrorCodes.IdentityCreationFailed, identityError.Description);                 
                 }
-                return null;
             }
             return identity;
 
         }
 
-        private async Task<UserProfile> CreateUserProfileAsync(OperationResult<string> result, RegisterIdentity request, IDbContextTransaction transaction, IdentityUser identity)
+        private async Task<UserProfile> CreateUserProfileAsync(OperationResult<string> result, RegisterIdentity request, IDbContextTransaction transaction, IdentityUser identity, CancellationToken cancellationToken)
         {
             try
             {
@@ -102,12 +94,12 @@ namespace SocialMediaApp.Application.Identity.CommandHandlers
                 var profile = UserProfile.CreateUserProfile(identity.Id, profileInfo);
 
                 _context.UserProfiles.Add(profile);
-                await _context.SaveChangesAsync();
+                await _context.SaveChangesAsync(cancellationToken);
                 return profile;
             }
             catch (Exception)
             {
-                await transaction.RollbackAsync();
+                await transaction.RollbackAsync(cancellationToken);
                 throw;
             }
         }

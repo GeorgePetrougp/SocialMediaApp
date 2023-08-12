@@ -27,31 +27,26 @@ namespace SocialMediaApp.Application.Posts.CommandHandlers
 
                 if (post is null)
                 {
-                    result.IsError = true;
-                    var error = new Error { ErrorCode = ErrorCodes.NotFound, ErrorMessage = $"No User Profile with ID{request.PostId} found" };
-                    result.Errors.Add(error);
+                    result.AddError(ErrorCodes.NotFound, string.Format(PostErrorMessages.PostNotFound,request.PostId));
                     return result;
                 }
 
                 if(post.UserProfileId != request.UserProfileId)
                 {
-                    result.IsError = true;
-                    var error = new Error { ErrorCode = ErrorCodes.PostDeleteNotPossible, ErrorMessage = $"Post delete not possible.Only the owner of the post can delete it" };
-                    result.Errors.Add(error);
+                    result.AddError(ErrorCodes.PostDeleteNotPossible, PostErrorMessages.PostDeleteNorPossible);
+                    
                     return result;
                 }
 
                 _context.Posts.Remove(post);
-                await _context.SaveChangesAsync();
+                await _context.SaveChangesAsync(cancellationToken);
 
                 result.Payload = post;
 
             }
             catch (Exception ex)
             {
-                var error = new Error { ErrorCode = ErrorCodes.UnknownError, ErrorMessage = $"{ex.Message}" };
-                result.IsError = true;
-                result.Errors.Add(error);
+                result.AddUnknownError(ex.Message);
             }
 
             return result;

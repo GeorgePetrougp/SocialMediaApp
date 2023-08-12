@@ -29,9 +29,7 @@ namespace SocialMediaApp.Application.Posts.QueryHandler
 
             if (post is null)
             {
-                result.IsError = true;
-                var error = new Error { ErrorCode = ErrorCodes.NotFound, ErrorMessage = $"No User Profile with ID{request.PostId} found" };
-                result.Errors.Add(error);
+                result.AddError(ErrorCodes.NotFound, string.Format(PostErrorMessages.PostNotFound, request.PostId));
                 return result;
             }
 

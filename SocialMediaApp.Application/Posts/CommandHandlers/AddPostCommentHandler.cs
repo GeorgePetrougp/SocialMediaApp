@@ -28,13 +28,11 @@ namespace SocialMediaApp.Application.Posts.CommandHandlers
 
             try
             {
-                var post = await _context.Posts.FirstOrDefaultAsync(post => post.PostId == request.PostId);
+                var post = await _context.Posts.FirstOrDefaultAsync(post => post.PostId == request.PostId, cancellationToken);
 
                 if (post is null)
                 {
-                    result.IsError = true;
-                    var error = new Error { ErrorCode = ErrorCodes.NotFound, ErrorMessage = $"No User Profile with ID{request.PostId} found" };
-                    result.Errors.Add(error);
+                    result.AddError(ErrorCodes.NotFound, string.Format(PostErrorMessages.PostNotFound, request.PostId));
                     return result;
                 }
 
@@ -44,26 +42,19 @@ namespace SocialMediaApp.Application.Posts.CommandHandlers
 
                 _context.Posts.Update(post);
 
-                await _context.SaveChangesAsync();
+                await _context.SaveChangesAsync(cancellationToken);
 
                 result.Payload = comment;
             }
 
             catch (PostCommentNotValidException ex)
             {
-                result.IsError = true;
-                ex.ValidationErrors.ForEach(e =>
-                {
-                    var error = new Error { ErrorCode = ErrorCodes.ValidationError, ErrorMessage = $"{ex.Message}" };
-                    result.Errors.Add(error);
-                });
+                ex.ValidationErrors.ForEach(e => result.AddError(ErrorCodes.ValidationError, e));
             }
 
             catch (Exception ex)
             {
-                var error = new Error { ErrorCode = ErrorCodes.UnknownError, ErrorMessage = $"{ex.Message}" };
-                result.IsError = true;
-                result.Errors.Add(error);
+                result.AddUnknownError(ex.Message);
             }
 
             return result;

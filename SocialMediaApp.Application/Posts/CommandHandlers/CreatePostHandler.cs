@@ -30,24 +30,18 @@ namespace SocialMediaApp.Application.Posts.CommandHandlers
             {
                 var post = Post.CreatePost(request.UserProfileId, request.TextContent);
                 _context.Posts.Add(post);
-                await _context.SaveChangesAsync();
+                await _context.SaveChangesAsync(cancellationToken);
 
                 result.Payload = post;
             }
             catch (PostNotValidException ex)
             {
-                result.IsError = true;
-                ex.ValidationErrors.ForEach(e =>
-                {
-                    var error = new Error { ErrorCode = ErrorCodes.ValidationError, ErrorMessage = $"{ex.Message}" };
-                    result.Errors.Add(error);
-                });
+                ex.ValidationErrors.ForEach(e => result.AddError(ErrorCodes.ValidationError, e));
+               
             }
             catch (Exception ex)
             {
-                var error = new Error { ErrorCode = ErrorCodes.UnknownError, ErrorMessage = $"{ex.Message}" };
-                result.IsError = true;
-                result.Errors.Add(error);
+                result.AddUnknownError(ex.Message);
             }
             return result;
         }

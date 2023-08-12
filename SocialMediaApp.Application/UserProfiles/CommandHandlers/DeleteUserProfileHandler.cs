@@ -30,14 +30,13 @@ namespace SocialMediaApp.Application.UserProfiles.CommandHandlers
 
             if (userProfile is null)
             {
-                result.IsError = true;
-                var error = new Error { ErrorCode = ErrorCodes.NotFound, ErrorMessage = $"No User Profile with ID{request.UserProfileId} found" };
-                result.Errors.Add(error);
+                result.AddError(ErrorCodes.NotFound, string.Format(UserProfileErrorMessages.UserProfileNotFound, request.UserProfileId));
+               
                 return result;
             }
 
             _context.UserProfiles.Remove(userProfile);
-            await _context.SaveChangesAsync();
+            await _context.SaveChangesAsync(cancellationToken);
 
             result.Payload = userProfile;
 

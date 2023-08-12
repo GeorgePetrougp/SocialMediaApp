@@ -36,9 +36,8 @@ namespace SocialMediaApp.Application.Posts.CommandHandlers
 
                 if (post == null)
                 {
-                    result.IsError = true;
-                    var error = new Error { ErrorCode = ErrorCodes.NotFound, ErrorMessage = $"No User Profile with ID{request.PostId} found" };
-                    result.Errors.Add(error);
+                    result.AddError(ErrorCodes.NotFound, string.Format(PostErrorMessages.PostNotFound, request.PostId));
+                   
                     return result;
                 }
 
@@ -46,9 +45,8 @@ namespace SocialMediaApp.Application.Posts.CommandHandlers
                     .FirstOrDefault(c => c.CommentId == request.CommentId);
                 if (comment == null)
                 {
-                    result.IsError = true;
-                    var error = new Error { ErrorCode = ErrorCodes.NotFound, ErrorMessage = $"No Comment with ID{request.CommentId} found" };
-                    result.Errors.Add(error);
+                    result.AddError(ErrorCodes.NotFound, string.Format(PostErrorMessages.CommentNotFound, request.CommentId));
+                    
                     return result;
                 }
 
@@ -62,9 +60,7 @@ namespace SocialMediaApp.Application.Posts.CommandHandlers
             }
             catch(Exception ex)
             {
-                var error = new Error { ErrorCode = ErrorCodes.UnknownError, ErrorMessage = $"{ex.Message}" };
-                result.IsError = true;
-                result.Errors.Add(error);
+                result.AddUnknownError(ex.Message);
             }
             
             return result;

@@ -35,14 +35,8 @@ namespace SocialMediaApp.Application.Posts.CommandHandlers
 
                 if (post is null)
                 {
-                    result.IsError = true;
-                    var error = new Error
-                    {
-
-                        ErrorCode = ErrorCodes.NotFound,
-                        ErrorMessage = $"No post found with ID {request.PostId}"
-                    };
-                    result.Errors.Add(error);
+                    result.AddError(ErrorCodes.NotFound, string.Format(PostErrorMessages.PostNotFound, request.PostId));
+                    
                     return result;
                 }
 
@@ -50,13 +44,7 @@ namespace SocialMediaApp.Application.Posts.CommandHandlers
 
                 if (comment is null)
                 {
-                    result.IsError = true;
-                    var error = new Error
-                    {
-                        ErrorCode = ErrorCodes.NotFound,
-                        ErrorMessage = $"Post doesn't include any comment with the specified ID {request.CommentId}"
-                    };
-                    result.Errors.Add(error);
+                    result.AddError(ErrorCodes.NotFound, string.Format(PostErrorMessages.CommentNotFound, request.CommentId));
                     return result;
                 }
 
@@ -68,25 +56,14 @@ namespace SocialMediaApp.Application.Posts.CommandHandlers
             }
             catch (PostCommentNotValidException e)
             {
-                result.IsError = true;
-                e.ValidationErrors.ForEach(err =>
-                {
-                    var error = new Error
-                    {
-                        ErrorCode = ErrorCodes.ValidationError,
-                        ErrorMessage = $"{e.Message}",
-                    };
-                    result.Errors.Add(error);
-                });
+
+
+                e.ValidationErrors.ForEach(error => result.AddError(ErrorCodes.ValidationError, error));
+
             }
             catch (Exception e)
             {
-                var error = new Error
-                {
-                    ErrorCode = ErrorCodes.UnknownError,
-                    ErrorMessage = $"{e.Message}"
-                };
-                result.Errors.Add(error);
+                result.AddUnknownError(e.Message);
             }
 
             return result;
