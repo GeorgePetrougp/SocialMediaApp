@@ -50,11 +50,15 @@ namespace SocialMediaApp.Application.Posts.CommandHandlers
                     return result;
                 }
 
-                
+                if(comment.UserProfileId != request.UserProfileId)
+                {
+                    result.AddError(ErrorCodes.CommentRemovalNotAuthorized, PostErrorMessages.CommentRemovalNotAuthorised);
+                    return result;
+                }
 
                 post.RemoveComment(comment);
                 _context.Posts.Update(post);
-                await _context.SaveChangesAsync();
+                await _context.SaveChangesAsync(cancellationToken);
 
                 result.Payload = comment;
             }

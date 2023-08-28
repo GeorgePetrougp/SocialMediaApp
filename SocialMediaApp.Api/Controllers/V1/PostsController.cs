@@ -127,19 +127,7 @@ namespace SocialMediaApp.Api.Controllers.V1
         [ValidateModel]
         public async Task<IActionResult> AddCommentToPost(string postId, [FromBody] PostCommentCreate incommingComment)
         {
-            var isValid = Guid.TryParse(incommingComment.UserProfileId, out var userProfileId);
-
-            if (!isValid)
-            {
-                var apiError = new ErrorResponse();
-
-                apiError.StatusCode = 404;
-                apiError.StatusPhrase = "Bad Request";
-                apiError.TimeStamp = DateTime.Now;
-                apiError.Errors.Add("Provided User Profile Id is not in a valid Guid format");
-
-                return BadRequest(apiError);
-            }
+            var userProfileId = HttpContext.GetUserProfileIdClaimValue();
 
             var command = new AddPostComment()
             {
@@ -162,16 +150,21 @@ namespace SocialMediaApp.Api.Controllers.V1
         [Route(ApiRoutes.Posts.PostComments)]
         [ValidateGuid("postId")]
         [ValidateGuid("commentId")]
-        public async Task<IActionResult> UpdatePostComment(string postId, string commentId, [FromBody] PostCommentUpdate updatedComment)
+        public async Task<IActionResult> UpdatePostComment(string postId, string commentId, [FromBody] PostCommentUpdate updatedComment, CancellationToken cancellationToken)
         {
+            var userProfileGuid = HttpContext.GetUserProfileIdClaimValue();
+            var postGuid = Guid.Parse(postId);
+            var commentGuid = Guid.Parse(commentId);
+
             var command = new UpdatePostCommentText()
             {
+                UserProfileId = userProfileGuid,
                 UpdatedText = updatedComment.Text,
-                PostId = Guid.Parse(postId),
-                CommentId = Guid.Parse(commentId)
+                PostId = postGuid,
+                CommentId = commentGuid
             };
 
-            var result = await _mediator.Send(command);
+            var result = await _mediator.Send(command,cancellationToken);
 
             if (result.IsError) return HandleErrorResponse(result.Errors);
 
@@ -183,16 +176,20 @@ namespace SocialMediaApp.Api.Controllers.V1
         [HttpDelete]
         [Route(ApiRoutes.Posts.CommentById)]
         [ValidateGuid("postId", "commentId")]
-        public async Task<IActionResult> DeleteCommentFromPost(string postId, string commentId)
+        public async Task<IActionResult> DeleteCommentFromPost(string postId, string commentId, CancellationToken cancellationToken)
         {
+            var userProfileGuid = HttpContext.GetUserProfileIdClaimValue();
+            var postGuid = Guid.Parse(postId);
+            var commentGuid = Guid.Parse(commentId);
 
             var command = new DeleteCommentFromPost
             {
-                CommentId = Guid.Parse(commentId),
-                PostId = Guid.Parse(postId)
+                UserProfileId = userProfileGuid,
+                CommentId = commentGuid,
+                PostId = postGuid
             };
 
-            var result = await _mediator.Send(command);
+            var result = await _mediator.Send(command, cancellationToken);
 
             return result.IsError ? HandleErrorResponse(result.Errors) : NoContent();
 

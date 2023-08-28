@@ -11,6 +11,7 @@ namespace SocialMediaApp.Application.Posts.Commands
 {
     public class DeleteCommentFromPost : IRequest<OperationResult<PostComment>>
     {
+        public Guid UserProfileId { get; set; }
         public Guid PostId { get; set; }
         public Guid CommentId { get; set; }
     }

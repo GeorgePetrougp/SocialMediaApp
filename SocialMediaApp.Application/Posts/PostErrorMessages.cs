@@ -14,5 +14,6 @@ namespace SocialMediaApp.Application.Posts
         public const string CommentNotFound = "Post doesn't include any comment with the specified ID {0}";
         public const string PostInteractionNotFound = "Interaction Not Found";
         public const string InteractionRemovalNotAuthorised = "Cannot remove interaction because you are not its author";
+        public const string CommentRemovalNotAuthorised = "Cannot remove comment because you are not its author";
     }
 }

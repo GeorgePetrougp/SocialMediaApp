@@ -16,11 +16,11 @@ namespace SocialMediaApp.Application.Posts.CommandHandlers
 {
     public class UpdatePostCommentTextHandler : IRequestHandler<UpdatePostCommentText, OperationResult<PostComment>>
     {
-        private readonly DataContext _ctx;
+        private readonly DataContext _context;
 
-        public UpdatePostCommentTextHandler(DataContext ctx)
+        public UpdatePostCommentTextHandler(DataContext context)
         {
-            _ctx = ctx;
+            _context = context;
         }
 
         public async Task<OperationResult<PostComment>> Handle(UpdatePostCommentText request, CancellationToken cancellationToken)
@@ -29,11 +29,11 @@ namespace SocialMediaApp.Application.Posts.CommandHandlers
 
             try
             {
-                var post = await _ctx.Posts
+                var post = await _context.Posts
                     .Include(p => p.Comments)
-                    .FirstOrDefaultAsync(p => p.PostId == request.PostId);
+                    .FirstOrDefaultAsync(p => p.PostId == request.PostId,cancellationToken);
 
-                if (post is null)
+                if (post == null)
                 {
                     result.AddError(ErrorCodes.NotFound, string.Format(PostErrorMessages.PostNotFound, request.PostId));
                     
@@ -42,15 +42,22 @@ namespace SocialMediaApp.Application.Posts.CommandHandlers
 
                 var comment = post.Comments.FirstOrDefault(c => c.CommentId == request.CommentId);
 
-                if (comment is null)
+                if (comment == null)
                 {
                     result.AddError(ErrorCodes.NotFound, string.Format(PostErrorMessages.CommentNotFound, request.CommentId));
                     return result;
                 }
 
-                comment.UpdateCommentText(request.UpdatedText);
+                if(comment.UserProfileId != request.UserProfileId)
+                {
+                    result.AddError(ErrorCodes.CommentRemovalNotAuthorized, PostErrorMessages.CommentRemovalNotAuthorised);
+                    return result;
+                }
 
-                await _ctx.SaveChangesAsync();
+                comment.UpdateCommentText(request.UpdatedText);
+                _context.Posts.Update(post);
+
+                await _context.SaveChangesAsync(cancellationToken);
 
                 result.Payload = comment;
             }
