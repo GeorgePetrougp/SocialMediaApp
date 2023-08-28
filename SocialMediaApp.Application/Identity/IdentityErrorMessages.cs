@@ -11,5 +11,7 @@ namespace SocialMediaApp.Application.Identity
         public const string NonExistantIdentityUser = "Unable to find user with the specified username";
         public const string InvalidPassword = "Password Not valid. Login Failed";
         public const string EmailAlreadyExists = "Email already exists.Can not Register";
+        public const string UnauthorisedAccountRemoval = "Cannot remove account because you are not its owner";
+
     }
 }

@@ -1,6 +1,6 @@
-﻿using AutoMapper;
-using SocialMediaApp.Api.Contracts.Post.Responses;
-using SocialMediaApp.Domain.Aggregates.PostAggregate;
+﻿
+using PostInteraction = SocialMediaApp.Domain.Aggregates.PostAggregate.PostInteraction;
+
 
 namespace SocialMediaApp.Api.MappingProfiles
 {
@@ -10,6 +10,13 @@ namespace SocialMediaApp.Api.MappingProfiles
         {
             CreateMap<Post, PostResponse>();
             CreateMap<PostComment, PostCommentResponse>();
+
+            CreateMap<PostInteraction,Contracts.Post.Responses.PostInteraction>()
+                .ForMember(d => d.Type, 
+                    opt => opt.MapFrom(
+                        src => src.InteractionType.ToString()))
+                .ForMember(d => d.Author, opt => opt.MapFrom(src => src.UserProfile));
+
 
         }
     }

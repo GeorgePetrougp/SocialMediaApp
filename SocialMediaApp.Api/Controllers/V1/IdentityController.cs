@@ -47,5 +47,24 @@ namespace SocialMediaApp.Api.Controllers.V1
 
             return Ok(authenticationResult);
         }
+
+        [HttpDelete]
+        [Route(ApiRoutes.Identity.IdentityById)]
+        [ValidateGuid("identityUserId")]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+        public async Task<IActionResult> DeleteAccount(string identityUserId, CancellationToken cancellationToken)
+        {
+            var identityUserGuid = Guid.Parse(identityUserId);
+            var requesterGuid = HttpContext.GetIdentityIdClaimValue();
+
+            var command = new RemoveAccount{IdentityUserId = identityUserGuid, RequesterGuid = requesterGuid  };
+
+            var result = await _mediator.Send(command);
+
+            if (result.IsError) return HandleErrorResponse(result.Errors);
+
+            return NoContent();
+
+        }
     }
 }

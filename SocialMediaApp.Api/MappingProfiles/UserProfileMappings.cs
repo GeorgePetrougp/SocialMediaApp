@@ -13,6 +13,9 @@ namespace SocialMediaApp.Api.MappingProfiles
             CreateMap<UserProfileCreateUpdate, UpdateUserProfileBasicInfo>();
             CreateMap<UserProfile, UserProfileResponse>();
             CreateMap<BasicInfo, BasicInformation>();
+            CreateMap<UserProfile, InteractionUser>()
+                .ForMember(d => d.FullName, opt => opt.MapFrom(src => src.BasicInfo.FirstName + " " + src.BasicInfo.LastName))
+                .ForMember(d => d.CurrentCity, opt => opt.MapFrom(src => src.BasicInfo.CurrentCity));
         }
     }
 }

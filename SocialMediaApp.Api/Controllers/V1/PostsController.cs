@@ -1,5 +1,9 @@
 ﻿
 
+using Microsoft.AspNetCore.Mvc;
+using SocialMediaApp.Api.Contracts.Post.Requests;
+using SocialMediaApp.Api.Contracts.Post.Responses;
+
 namespace SocialMediaApp.Api.Controllers.V1
 {
     [ApiVersion("1.0")]
@@ -192,7 +196,60 @@ namespace SocialMediaApp.Api.Controllers.V1
 
             return result.IsError ? HandleErrorResponse(result.Errors) : NoContent();
 
+        }
 
+        [HttpGet]
+        [Route(ApiRoutes.Posts.PostInteractions)]
+        [ValidateGuid("postId")]
+        public async Task<IActionResult> GetPostInteractions(string postId, CancellationToken cancellationToken)
+        {
+            var postGuid = Guid.Parse(postId);
+            var query = new GetPostInteractions { PostId = postGuid};
+            var result = await _mediator.Send(query,cancellationToken);
+
+            if(result.IsError) HandleErrorResponse(result.Errors);
+
+
+            var mapped = _mapper.Map<List<Contracts.Post.Responses.PostInteraction>>(result.Payload);
+            return Ok(mapped);
+        }
+
+        [HttpPost]
+        [Route(ApiRoutes.Posts.PostInteractions)]
+        [ValidateGuid("postId")]
+        [ValidateModel]
+        public async Task<IActionResult> AddPostInteraction(string postId,PostInteractionCreate interaction, CancellationToken cancellationToken)
+        {
+            var postGuid = Guid.Parse(postId);
+            var userProfileId = HttpContext.GetUserProfileIdClaimValue();
+            var command = new AddInteraction { PostId = postGuid, UserProfileId = userProfileId, Type = interaction.Type };
+
+            var result = await _mediator.Send(command, cancellationToken);
+            if (result.IsError) HandleErrorResponse(result.Errors);
+
+            var mapped = _mapper.Map<Contracts.Post.Responses.PostInteraction>(result.Payload);
+
+            return Ok(mapped);
+        }
+
+        [HttpDelete]
+        [Route(ApiRoutes.Posts.InteractionById)]
+        [ValidateGuid("postId", "interactionId")]
+        public async Task<IActionResult> RemovePostInteraction(string postId, string interactionId, CancellationToken cancellationToken)
+        {
+            var postGuid = Guid.Parse(postId);
+            var interactionGuid = Guid.Parse(interactionId);
+            var userProfileGuid = HttpContext.GetUserProfileIdClaimValue();
+
+            var command = new RemovePostInteraction { PostId = postGuid,InteractionId = interactionGuid,UserProfileId = userProfileGuid};
+
+            var result = await _mediator.Send(command,cancellationToken);
+
+            if (result.IsError) return HandleErrorResponse(result.Errors);
+
+            var mapped = _mapper.Map<Contracts.Post.Responses.PostInteraction>(result.Payload);
+
+            return Ok(mapped);
 
         }
     }
