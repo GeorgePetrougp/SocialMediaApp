@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore.Storage;
 using SocialMediaApp.Application.Enums;
 using SocialMediaApp.Application.Identity.Commands;
+using SocialMediaApp.Application.Identity.Dtos;
 using SocialMediaApp.Application.Models;
 using SocialMediaApp.Application.Services;
 using SocialMediaApp.Data;
@@ -14,21 +15,24 @@ using System.Security.Claims;
 
 namespace SocialMediaApp.Application.Identity.CommandHandlers
 {
-    public class RegisterIdentityHandler : IRequestHandler<RegisterIdentity, OperationResult<string>>
+    public class RegisterIdentityHandler : IRequestHandler<RegisterIdentity, OperationResult<IdentityUserProfileDto>>
     {
         private readonly DataContext _context;
         private readonly UserManager<IdentityUser> _userManager;
         private readonly IdentityService _identityService;
+        private readonly IMapper _mapper;
 
-        public RegisterIdentityHandler(DataContext context, UserManager<IdentityUser> userManager, IdentityService identityService)
+        public RegisterIdentityHandler(DataContext context, UserManager<IdentityUser> userManager, IdentityService identityService, IMapper mapper)
         {
             _context = context;
             _userManager = userManager;
             _identityService = identityService;
+            _mapper = mapper;
+
         }
-        public async Task<OperationResult<string>> Handle(RegisterIdentity request, CancellationToken cancellationToken)
+        public async Task<OperationResult<IdentityUserProfileDto>> Handle(RegisterIdentity request, CancellationToken cancellationToken)
         {
-            var result = new OperationResult<string>();
+            var result = new OperationResult<IdentityUserProfileDto>();
             try
             {
                 await IdentityDoesNotExistValidation(result, request);
@@ -43,7 +47,10 @@ namespace SocialMediaApp.Application.Identity.CommandHandlers
                 var profile = await CreateUserProfileAsync(result, request, transaction, identity,cancellationToken);
                 await transaction.CommitAsync(cancellationToken);
 
-                result.Payload = GetJwtString(identity, profile);
+                result.Payload = _mapper.Map<IdentityUserProfileDto>(profile);
+
+                result.Payload.Token = GetJwtString(identity, profile);
+                result.Payload.UserName = identity.UserName;
                 return result;
 
             }
@@ -59,7 +66,7 @@ namespace SocialMediaApp.Application.Identity.CommandHandlers
             return result;
         }
 
-        private async Task IdentityDoesNotExistValidation(OperationResult<string> result, RegisterIdentity request)
+        private async Task IdentityDoesNotExistValidation(OperationResult<IdentityUserProfileDto> result, RegisterIdentity request)
         {
 
             var existingIdentity = await _userManager.FindByEmailAsync(request.UserName);
@@ -67,7 +74,7 @@ namespace SocialMediaApp.Application.Identity.CommandHandlers
             if (existingIdentity != null) result.AddError(ErrorCodes.IdentityUserAlreadyExists, IdentityErrorMessages.EmailAlreadyExists);
 
         }
-        private async Task<IdentityUser> CreateIdentityUserAsync(OperationResult<string> result, RegisterIdentity request, IDbContextTransaction transaction, CancellationToken cancellationToken)
+        private async Task<IdentityUser> CreateIdentityUserAsync(OperationResult<IdentityUserProfileDto> result, RegisterIdentity request, IDbContextTransaction transaction, CancellationToken cancellationToken)
         {
             var identity = new IdentityUser { Email = request.UserName, UserName = request.UserName };
             var createdIdentity = await _userManager.CreateAsync(identity, request.Password);
@@ -85,7 +92,7 @@ namespace SocialMediaApp.Application.Identity.CommandHandlers
 
         }
 
-        private async Task<UserProfile> CreateUserProfileAsync(OperationResult<string> result, RegisterIdentity request, IDbContextTransaction transaction, IdentityUser identity, CancellationToken cancellationToken)
+        private async Task<UserProfile> CreateUserProfileAsync(OperationResult<IdentityUserProfileDto> result, RegisterIdentity request, IDbContextTransaction transaction, IdentityUser identity, CancellationToken cancellationToken)
         {
             try
             {

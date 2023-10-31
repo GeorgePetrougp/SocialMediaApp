@@ -1,8 +1,10 @@
-﻿using MediatR;
+﻿using AutoMapper;
+using MediatR;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using SocialMediaApp.Application.Enums;
 using SocialMediaApp.Application.Identity.Commands;
+using SocialMediaApp.Application.Identity.Dtos;
 using SocialMediaApp.Application.Models;
 using SocialMediaApp.Application.Services;
 using SocialMediaApp.Data;
@@ -12,21 +14,23 @@ using System.Security.Claims;
 
 namespace SocialMediaApp.Application.Identity.CommandHandlers
 {
-    public class LoginCommandHandler : IRequestHandler<LoginCommand, OperationResult<string>>
+    public class LoginCommandHandler : IRequestHandler<LoginCommand, OperationResult<IdentityUserProfileDto>>
     {
         private readonly DataContext _context;
         private readonly UserManager<IdentityUser> _userManager;
         private readonly IdentityService _identityService;
+        private readonly IMapper _mapper;
 
-        public LoginCommandHandler(DataContext context, UserManager<IdentityUser> userManager, IdentityService identityService)
+        public LoginCommandHandler(DataContext context, UserManager<IdentityUser> userManager, IdentityService identityService, IMapper mapper)
         {
             _context = context;
             _userManager = userManager;
             _identityService = identityService;
+            _mapper = mapper;
         }
-        public async Task<OperationResult<string>> Handle(LoginCommand request, CancellationToken cancellationToken)
+        public async Task<OperationResult<IdentityUserProfileDto>> Handle(LoginCommand request, CancellationToken cancellationToken)
         {
-            var result = new OperationResult<string>();
+            var result = new OperationResult<IdentityUserProfileDto>();
 
             try
             {
@@ -35,8 +39,10 @@ namespace SocialMediaApp.Application.Identity.CommandHandlers
 
                 var userProfile = await _context.UserProfiles.FirstOrDefaultAsync(user => user.IdentityId == identityUser.Id);
 
+                result.Payload = _mapper.Map<IdentityUserProfileDto>(userProfile);
+                result.Payload.UserName = identityUser.UserName;
 
-                result.Payload = GetJwtString(identityUser, userProfile);
+                result.Payload.Token = GetJwtString(identityUser, userProfile);
 
                 return result;
 
@@ -50,7 +56,7 @@ namespace SocialMediaApp.Application.Identity.CommandHandlers
             return result;
         }
 
-        private async Task<IdentityUser> GetIdentityUserValidatedAsync(LoginCommand request, OperationResult<string> result)
+        private async Task<IdentityUser> GetIdentityUserValidatedAsync(LoginCommand request, OperationResult<IdentityUserProfileDto> result)
         {
             var identityUser = await _userManager.FindByEmailAsync(request.UserName);
 

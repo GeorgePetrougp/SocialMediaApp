@@ -1,6 +1,7 @@
 ﻿using SocialMediaApp.Api.Contracts.Identity;
 using SocialMediaApp.Api.Filters;
 using SocialMediaApp.Application.Identity.Commands;
+using SocialMediaApp.Application.Identity.Queries;
 
 namespace SocialMediaApp.Api.Controllers.V1
 {
@@ -28,9 +29,9 @@ namespace SocialMediaApp.Api.Controllers.V1
 
             if (result.IsError) return HandleErrorResponse(result.Errors);
 
-            var authenticationResult = new AuthenticationResult() { Token = result.Payload };
+            var userProfileContract = _mapper.Map<IdentityUserProfile>(result.Payload);
 
-            return Ok(authenticationResult);
+            return Ok(userProfileContract);
         }
 
         [HttpPost]
@@ -43,9 +44,9 @@ namespace SocialMediaApp.Api.Controllers.V1
 
             if (result.IsError) return HandleErrorResponse(result.Errors);
 
-            var authenticationResult = new AuthenticationResult() { Token = result.Payload };
+            var userProfileContract = _mapper.Map<IdentityUserProfile>(result.Payload);
 
-            return Ok(authenticationResult);
+            return Ok(userProfileContract);
         }
 
         [HttpDelete]
@@ -66,5 +67,23 @@ namespace SocialMediaApp.Api.Controllers.V1
             return NoContent();
 
         }
+
+        //[HttpGet]
+        //[Route(ApiRoutes.Identity.CurrentUser)]
+        //[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+
+        //public async Task<IActionResult> CurrentUser(CancellationToken cancellationToken)
+        //{
+        //    var userProfileId = HttpContext.GetUserProfileIdClaimValue();
+
+        //    var query = new GetCurrentUser { UserProfileId = userProfileId, ClaimsPrincipal = HttpContext.User };
+        //    var result = await _mediator.Send(query,cancellationToken);
+
+        //    if (result.IsError) return HandleErrorResponse(result.Errors);
+
+        //    var mapped = _mapper.Map<IdentityUserProfile>(result.Payload);
+
+        //    return Ok(mapped);
+        //}
     }
 }

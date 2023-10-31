@@ -1,5 +1,6 @@
 ﻿using SocialMediaApp.Api.Contracts.Identity;
 using SocialMediaApp.Application.Identity.Commands;
+using SocialMediaApp.Application.Identity.Dtos;
 
 namespace SocialMediaApp.Api.MappingProfiles
 {
@@ -9,6 +10,7 @@ namespace SocialMediaApp.Api.MappingProfiles
         {
             CreateMap<UserRegistration, RegisterIdentity>();
             CreateMap<UserLogIn, LoginCommand>();
+            CreateMap<IdentityUserProfileDto, IdentityUserProfile>();
         }
     }
 }
